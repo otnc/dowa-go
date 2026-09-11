@@ -1,0 +1,12 @@
+# Go のビルド成果物
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# go build / go test のキャッシュ等がGOPATH配下に置かれる場合の保険
+/bin/
+/dist/
