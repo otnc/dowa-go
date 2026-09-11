@@ -1,0 +1,93 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (e.g. v1.2.3). Leave empty to auto-compute it from the latest tag using 'bump' below."
+        required: false
+        type: string
+      bump:
+        description: "How to bump the version (ignored if 'version' is set)"
+        required: false
+        type: choice
+        default: patch
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history is needed to list existing tags.
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: go test
+        run: go test ./...
+
+      - name: Determine release version
+        id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_BUMP: ${{ inputs.bump }}
+        run: |
+          set -euo pipefail
+
+          if [ -n "$INPUT_VERSION" ]; then
+            version="$INPUT_VERSION"
+          else
+            latest_tag=$(git tag -l 'v*.*.*' --sort=-v:refname | head -n1)
+            latest_tag="${latest_tag:-v0.0.0}"
+            IFS='.' read -r major minor patch <<< "${latest_tag#v}"
+            case "$INPUT_BUMP" in
+              major) major=$((major + 1)); minor=0; patch=0 ;;
+              minor) minor=$((minor + 1)); patch=0 ;;
+              patch|*) patch=$((patch + 1)) ;;
+            esac
+            version="v${major}.${minor}.${patch}"
+          fi
+
+          if ! [[ "$version" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::'$version' is not a valid SemVer tag (expected vMAJOR.MINOR.PATCH)"
+            exit 1
+          fi
+          if git rev-parse "$version" >/dev/null 2>&1; then
+            echo "::error::tag $version already exists"
+            exit 1
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ steps.version.outputs.version }}" -m "Release ${{ steps.version.outputs.version }}"
+          git push origin "${{ steps.version.outputs.version }}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          generate_release_notes: true
+
+      - name: Notify Go module proxy
+        # The module path is read from go.mod, so this works unchanged in any Go repo.
+        # Pushing the tag already makes the module available; this step just speeds up indexing.
+        run: |
+          module=$(go list -m)
+          curl -sf "https://proxy.golang.org/${module}/@v/${{ steps.version.outputs.version }}.info" > /dev/null || true
