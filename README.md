@@ -78,27 +78,7 @@ dowa.Contains(text, dowa.Options{Relaxed: true}) // relaxed
 - `dowaSchema`(Standard Schema対応)はTS/Zod/Valibotエコシステム固有の機能のため移植していません。バリデーションに組み込みたい場合は`FindMatches`の結果からエラーメッセージを組み立ててください
 - `Match.Index`は前述の通りバイトオフセットです
 
-## 開発
-
-```bash
-go build ./...
-go vet ./...
-gofmt -l .   # フォーマット崩れがあればファイル名が出力される
-go test ./...
-```
-
 貢献方法については [CONTRIBUTING.md](./CONTRIBUTING.md) を確認してください。
-
-## リリース
-
-Goのモジュールはnpmのような「公開」の手順がなく、[SemVer](https://semver.org/lang/ja/)形式のgitタグが存在すれば`go get github.com/otnc/dowa-go@vX.Y.Z`として利用可能になる。
-
-リリースはGitHubの Actions タブから [Release workflow](./.github/workflows/release.yml) を手動実行(workflow_dispatch)して行う。
-
-- `version`にバージョンを直接指定(例: `v1.2.3`)するか、空欄のまま`bump`で`patch`/`minor`/`major`のどれかを選ぶと、最新タグから自動算出される
-- 実行するとタグの作成・push、GitHub Releaseの作成、[pkg.go.dev](https://pkg.go.dev/github.com/otnc/dowa-go) へのインデックス通知までを自動で行う
-
-メジャーバージョンが2以上になる場合は、go.modのモジュールパスに`/v2`のようなサフィックスを付ける必要がある([Goのモジュールバージョニングの仕様](https://go.dev/doc/modules/major-version)による)。
 
 ## その他
 

@@ -4,6 +4,15 @@ PRに適切なラベルを付与してください。
 
 レビューが必要な場合やしばらく反応がない場合は、PRのコメントやDiscordでメンションしてください。
 
+## 開発
+
+```bash
+go build ./...
+go vet ./...
+gofmt -l .   # フォーマット崩れがあればファイル名が出力される
+go test ./...
+```
+
 ## 必要な操作
 
 1. このリポジトリをforkしてからローカルにクローンします
@@ -28,6 +37,17 @@ PRに適切なラベルを付与してください。
 > [!Important]
 >
 > 正規表現はGoの`regexp`パッケージ(RE2エンジン)でコンパイル可能である必要があります。後読み・先読みや後方参照はRE2でサポートされていないため使用できません
+
+## リリース
+
+Goのモジュールはnpmのような「公開」の手順がなく、[SemVer](https://semver.org/lang/ja/)形式のgitタグが存在すれば`go get github.com/otnc/dowa-go@vX.Y.Z`として利用可能になる。
+
+リリースはGitHubの Actions タブから [Release workflow](./.github/workflows/release.yml) を手動実行(workflow_dispatch)して行う。
+
+- `version`に`patch`/`minor`/`major`のいずれかを指定すると最新タグから自動算出、`v1.2.3`のように明示的なバージョンを指定するとそのまま使われる
+- 実行するとタグの作成・push、GitHub Releaseの作成、[pkg.go.dev](https://pkg.go.dev/github.com/otnc/dowa-go) へのインデックス通知までを自動で行う
+
+メジャーバージョンが2以上になる場合は、go.modのモジュールパスに`/v2`のようなサフィックスを付ける必要がある([Goのモジュールバージョニングの仕様](https://go.dev/doc/modules/major-version)による)。
 
 ## 禁止事項
 
