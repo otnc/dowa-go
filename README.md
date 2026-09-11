@@ -8,7 +8,9 @@
 
 冷笑を検知しますw
 
-[dowa](https://github.com/otnc/dowa) (npm) のGo移植版です。
+> [!Note]
+>   
+> [dowa](https://github.com/otnc/dowa) (npm) のGo移植版です。
 
 ## 動作環境
 
