@@ -4,18 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version to release (e.g. v1.2.3). Leave empty to auto-compute it from the latest tag using 'bump' below."
-        required: false
-        type: string
-      bump:
-        description: "How to bump the version (ignored if 'version' is set)"
-        required: false
-        type: choice
+        description: "Version to release: a semver bump (patch/minor/major) or an explicit version (e.g. v1.2.3)"
+        required: true
         default: patch
-        options:
-          - patch
-          - minor
-          - major
 
 permissions:
   contents: write
@@ -43,26 +34,29 @@ jobs:
         id: version
         env:
           INPUT_VERSION: ${{ inputs.version }}
-          INPUT_BUMP: ${{ inputs.bump }}
         run: |
           set -euo pipefail
 
-          if [ -n "$INPUT_VERSION" ]; then
-            version="$INPUT_VERSION"
-          else
-            latest_tag=$(git tag -l 'v*.*.*' --sort=-v:refname | head -n1)
-            latest_tag="${latest_tag:-v0.0.0}"
-            IFS='.' read -r major minor patch <<< "${latest_tag#v}"
-            case "$INPUT_BUMP" in
-              major) major=$((major + 1)); minor=0; patch=0 ;;
-              minor) minor=$((minor + 1)); patch=0 ;;
-              patch|*) patch=$((patch + 1)) ;;
-            esac
-            version="v${major}.${minor}.${patch}"
-          fi
+          case "$INPUT_VERSION" in
+            patch | minor | major)
+              latest_tag=$(git tag -l 'v*.*.*' --sort=-v:refname | head -n1)
+              latest_tag="${latest_tag:-v0.0.0}"
+              IFS='.' read -r major minor patch <<< "${latest_tag#v}"
+              case "$INPUT_VERSION" in
+                major) major=$((major + 1)); minor=0; patch=0 ;;
+                minor) minor=$((minor + 1)); patch=0 ;;
+                patch) patch=$((patch + 1)) ;;
+              esac
+              version="v${major}.${minor}.${patch}"
+              ;;
+            *)
+              version="$INPUT_VERSION"
+              [[ "$version" == v* ]] || version="v${version}"
+              ;;
+          esac
 
           if ! [[ "$version" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
-            echo "::error::'$version' is not a valid SemVer tag (expected vMAJOR.MINOR.PATCH)"
+            echo "::error::'$version' is not a valid version (expected patch/minor/major, or vMAJOR.MINOR.PATCH)"
             exit 1
           fi
           if git rev-parse "$version" >/dev/null 2>&1; then
